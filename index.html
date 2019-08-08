@@ -1,0 +1,292 @@
+<html>
+<head>
+
+	<title>AR with A-Frame</title>
+	
+	<!-- include A-Frame library -->
+	<script src="js/aframe-master.min.js"></script>
+	
+	<!-- include AR.js -->
+	<script src="js/aframe-ar.min.js"></script>
+	
+	<!-- library to take screenshots -->
+	<script src="js/dom-to-image.min.js"></script>
+	
+	<style>
+	.outerNavigation
+	{
+		border: 2px solid yellow; 
+		position: absolute; 
+		top: 0px; 
+		left: 0px; 
+		z-index: 1000; 
+		width: 100%; height: 100%; 
+		display: inline; 
+		pointer-events: none;
+	}
+	
+	.innerNavigation
+	{
+		display: inline-block;  /* aligns divs next to each other (otherwise they skip to next line) */
+		vertical-align: middle; /* vertically centers div content */
+	}
+	
+	img
+	{
+		display: inline-block;  /* aligns divs next to each other (otherwise they skip to next line) */
+		vertical-align: middle; /* vertically centers div content */
+	}
+	</style>
+	
+</head>
+
+<body>
+
+<!-- 
+  Based on the AR.js library and examples created by Jerome Etienne: https://github.com/jeromeetienne/AR.js/
+  
+  TODO:
+   - clicking on ground deselects object
+   - new button to toggle transparent boxes
+   - texture buttons?
+   - save canvas contents to jpg? (blend with video optional -- difficult)
+-->
+
+<a-scene embedded arjs="cameraParametersUrl: data/camera_para.dat; trackingMethod: best; debugUIEnabled: false;" >
+
+	<a-assets>
+		<img id="grid" src="images/border.png" crossorigin="anonymous" />
+		<img id="ground" src="images/border-noise.png" crossorigin="anonymous" />
+		<img id="selected" src="images/border-selected.png" crossorigin="anonymous" />
+	</a-assets>
+		
+	<a-marker-camera  type="pattern" url="data/alpha.patt" cursor="rayOrigin:mouse" emitevents="true" >
+		<a-entity id = "world">
+		
+			<a-plane
+				id = "plane"
+				width="25" height="25"
+				position="0.625 0. 0.625" 
+				rotation="-90 0 0" 
+				color="#888888" 
+				material="src: #ground; repeat:20 20; opacity:0.5">
+			</a-plane>
+			<a-entity id="axes">
+				<a-cylinder
+					radius = "0.05" 
+					height = "10.0"
+					position="0 0 0"
+					rotation="0 0 90"
+					color = "#FF0000"
+					material = "opacity: 1.0;">
+				</a-cylinder>
+				
+				<a-cylinder
+					radius = "0.05" 
+					height = "10.0"
+					position="0 0 0"
+					rotation="0 90 0"
+					color = "#00FF00"
+					material = "opacity: 1.0;">
+				</a-cylinder>
+				
+				<a-cylinder
+					radius = "0.05" 
+					height = "10.0"
+					position="0 0. 0.0"
+					rotation="90 0 0"
+					color = "#0000FF"
+					material = "opacity: 1.0;">
+				</a-cylinder>
+			</a-entity>
+			<!-- box entities will be added here -->
+		</a-entity>
+	</a-marker-camera>
+	
+	<!-- Define a static camera - fixed at camera position -->
+	<a-camera-static/>
+
+</a-scene>
+
+
+<div class = "outerNavigation">
+
+	<div style="border: 4px solid white; display:inline-block; vertical-align: middle; pointer-events:auto;">
+	
+			
+            <div id="mainmenu" class="innerNavigation">
+				<img src="buttons/movemenu.png"  onclick="showMenu('movemenu'); hideMenu('mainmenu');" />
+				<img src="buttons/colormenu.png" onclick="showMenu('colormenu'); hideMenu('mainmenu');" />
+				<img src="buttons/zoommenu.png"  onclick="showMenu('zoommenu'); hideMenu('mainmenu');" />
+			</div>
+            
+            <div id="movemenu" class="innerNavigation" style="display: none">
+                <div class="innerNavigation">
+                    <img src="buttons/add.png" onclick="addNewBox();" /><br/>
+                    <img src="buttons/close.png" onclick="removeSelectedBox();" />
+                </div>
+                
+                <div class="innerNavigation">
+                    <img src="buttons/xadd.png" onclick="moveBox(1.25, 0, 0);" /><br/>
+                    <img src="buttons/xlose.png" onclick="moveBox(-1.25, 0, 0);" />
+                </div>
+                
+                <div style="display:inline-block; vertical-align: middle;">
+                    <img src="buttons/zadd.png" onclick="moveBox(0, 0, 1.25);" /><br/>
+                    <img src="buttons/zlost.png" onclick="moveBox(0, 0, -1.25);" />
+                </div>
+                
+                <div class="innerNavigation">
+                    <img src="buttons/addy.png" onclick="moveBox(0, 1.25, 0);" /><br/>
+                    <img src="buttons/losey.png" onclick="moveBox(0, -1.25, 0);" />
+                </div>
+                
+                <div class="innerNavigation">
+                    <img src="buttons/visible.png" onclick="setAxesVisibility(true);" /><br/>
+                    <img src="buttons/invisible.png" onclick="setAxesVisibility(false);" />
+                </div>
+                
+                <div class="innerNavigation"; id="return">
+                    <img src="buttons/undo.png" onclick="showMenu('mainmenu'); hideMenu('movemenu');" /><br/>
+                </div>
+            </div>
+            
+            <div id="colormenu" class="innerNavigation" style="display: none">
+                <div class="innerNavigation">
+                    <img src="buttons/red.png" onclick="setColor('red');" /><br/>
+                    <img src="buttons/green.png" onclick="setColor('green');" />
+                </div>
+                
+                <div class="innerNavigation">
+                    <img src="buttons/orange.png" onclick="setColor('orange');" /><br/>
+                    <img src="buttons/blue.png" onclick="setColor('blue');" />
+                </div>
+                
+                <div class="innerNavigation">
+                    <img src="buttons/yellow.png" onclick="setColor('yellow');" /><br/>
+                    <img src="buttons/purple.png" onclick="setColor('purple');" />
+                </div>
+                
+                <div class="innerNavigation">
+                    <img src="buttons/white.png" onclick="setColor('white');" /><br/>
+                    <img src="buttons/black.png" onclick="setColor('black');" />
+                </div>
+                
+                <div class="innerNavigation"; id="return">
+                    <img src="buttons/undo.png" onclick="showMenu('mainmenu'); hideMenu('colormenu');" /><br/>
+                </div>
+			</div>
+            
+            <div id="zoommenu" class="innerNavigation" style="display: none">
+                <div class="innerNavigation">
+                    <img src="buttons/zoom-in.png" onclick="zoom(2.0);" /><br/>
+                    <img src="buttons/zoom-out.png" onclick="zoom(0.5);" />
+                </div>
+                <div class="innerNavigation"; id="return">
+                    <img src="buttons/undo.png" onclick="showMenu('mainmenu'); hideMenu('zoommenu');" /><br/>
+                </div>
+			</div>
+            
+			
+		</div>
+    </div>
+
+</div>
+
+
+<script>
+
+
+let showMenu = function(menuName)
+{
+    let menu = document.querySelector('#' + menuName);
+    menu.style.display = "inline-block" 
+}
+
+let hideMenu = function(menuName)
+{
+    let menu = document.querySelector('#' + menuName);
+    menu.style.display = "none" 
+}
+
+// selectedBox will refer to the most recently created box object.
+let selectedBox = null;
+let boxCount = 0;
+
+let addNewBox = function()
+{
+	let scene = document.querySelector('#world');
+	
+	let boxLocal = document.createElement('a-box');
+	
+	boxLocal.setAttribute("width",  "1.25");
+	boxLocal.setAttribute("height", "1.25");
+	boxLocal.setAttribute("depth",  "1.25");
+	boxLocal.setAttribute("position", "0 0.625 0");
+
+	boxLocal.setAttribute("color", "white");
+	boxLocal.setAttribute("material", "src", "#grid");
+	
+	boxCount++;
+	
+	boxLocal.setAttribute("id", "box" + boxCount);
+	
+	boxLocal.setAttribute("markerhandler", "");
+	
+	boxLocal.addEventListener('click', function()
+		{
+			if (selectedBox != null)
+				selectedBox.setAttribute("material", "src", "#grid");
+			selectedBox = boxLocal;
+			selectedBox.setAttribute("material", "src", "#selected");
+		}
+	);
+
+	scene.appendChild(boxLocal);
+	
+	
+	if (selectedBox != null)
+		selectedBox.setAttribute("material", "src", "#grid");
+	// assign global reference
+	selectedBox = boxLocal;
+	selectedBox.setAttribute("material", "src", "#selected");
+}
+
+let removeSelectedBox=function(){
+	if(selectedBox != null){
+		let scene = document.querySelector('#world');
+		world.removeChild(selectedBox)
+	}
+}
+
+let moveBox = function(x, y, z)
+{
+	let positionObject = selectedBox.getAttribute("position");
+	positionObject.x += x;
+	positionObject.y += y;
+	positionObject.z += z;
+	selectedBox.setAttribute("position", positionObject);
+}
+
+let setColor = function(colorName)
+{
+	selectedBox.setAttribute("color", colorName);
+}
+
+let zoom = function(amount)
+{
+	document.querySelector("#world").object3D.scale.multiplyScalar(amount);
+}
+
+let setAxesVisibility=function(visible)
+{
+	let axis = document.querySelector('#axes');
+	axis.setAttribute("visible", visible);
+}
+
+
+</script>
+
+
+</body>
+</html>
